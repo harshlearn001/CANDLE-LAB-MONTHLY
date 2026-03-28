@@ -1,0 +1,130 @@
+import pandas as pd
+from pathlib import Path
+
+print("📊 BUILDING MONTHLY CANDLES (EQUITY + INDICES)\n")
+
+# ============================================
+# PATHS
+# ============================================
+FNO_FILE = Path(r"H:\CANDLE-LAB-MONTHLY\config\fno_symbols.csv")
+
+EQUITY_DIR = Path(r"H:\MarketForge\data\master\Equity_stock_master")
+INDICES_DIR = Path(r"H:\MarketForge\data\master\Indices_master")
+
+OUT_DIR = Path(r"H:\CANDLE-LAB-MONTHLY\data\monthly")
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# ============================================
+# LOAD F&O SYMBOLS (ONLY FOR EQUITY)
+# ============================================
+fno_df = pd.read_csv(FNO_FILE)
+FNO_SYMBOLS = set(fno_df["SYMBOL"].astype(str).str.upper().str.strip())
+
+print(f"Loaded F&O symbols: {len(FNO_SYMBOLS)}\n")
+
+# ============================================
+# FUNCTION: BUILD MONTHLY
+# ============================================
+# ============================================
+# FUNCTION: BUILD MONTHLY (UPDATED)
+# ============================================
+def build_monthly(file, symbol, tag):
+    try:
+        df = pd.read_csv(file)
+
+        # ============================================
+        # AUTO DATE COLUMN DETECTION
+        # ============================================
+        if "DATE" in df.columns:
+            date_col = "DATE"
+        elif "TRADE_DATE" in df.columns:
+            date_col = "TRADE_DATE"
+        else:
+            print(f"⚠ Skipped {symbol} (no DATE column)")
+            return
+
+        # ============================================
+        # CHECK OHLC
+        # ============================================
+        required_cols = {"OPEN", "HIGH", "LOW", "CLOSE"}
+        if not required_cols.issubset(df.columns):
+            print(f"⚠ Skipped {symbol} (missing OHLC)")
+            return
+
+        # ============================================
+        # CLEAN & PREPARE
+        # ============================================
+        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+        df.dropna(subset=[date_col], inplace=True)
+
+        df.sort_values(date_col, inplace=True)
+        df.set_index(date_col, inplace=True)
+
+        # ============================================
+        # BUILD MONTHLY (ME = Month End)
+        # ============================================
+        monthly = pd.DataFrame()
+        monthly["OPEN"] = df["OPEN"].resample("ME").first()
+        monthly["HIGH"] = df["HIGH"].resample("ME").max()
+        monthly["LOW"] = df["LOW"].resample("ME").min()
+        monthly["CLOSE"] = df["CLOSE"].resample("ME").last()
+
+        if "VOLUME" in df.columns:
+            monthly["VOLUME"] = df["VOLUME"].resample("ME").sum()
+        else:
+            monthly["VOLUME"] = 0
+
+        monthly.dropna(inplace=True)
+        monthly.reset_index(inplace=True)
+
+        # ============================================
+        # STANDARDIZE OUTPUT COLUMN NAME
+        # ============================================
+        monthly.rename(columns={date_col: "DATE"}, inplace=True)
+
+        monthly["SYMBOL"] = symbol
+        monthly["TYPE"] = tag  # EQUITY / INDEX
+
+        monthly = monthly[
+            ["DATE", "SYMBOL", "TYPE", "OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]
+        ]
+
+        # ============================================
+        # SAVE
+        # ============================================
+        out_file = OUT_DIR / f"{symbol}.csv"
+        monthly.to_csv(out_file, index=False)
+
+        print(f"✔ {symbol} ({tag}) done")
+
+    except Exception as e:
+        print(f"❌ ERROR: {file} | {e}")
+
+# ============================================
+# PROCESS EQUITY (F&O ONLY)
+# ============================================
+print("🔹 Processing EQUITY (F&O only)\n")
+
+for file in EQUITY_DIR.glob("*.csv"):
+    symbol = file.stem.upper()
+
+    if symbol not in FNO_SYMBOLS:
+        continue
+
+    build_monthly(file, symbol, "EQUITY")
+
+# ============================================
+# PROCESS INDICES (ALL)
+# ============================================
+print("\n🔹 Processing INDICES (ALL)\n")
+
+for file in INDICES_DIR.glob("*.csv"):
+    symbol = file.stem.upper()
+
+    build_monthly(file, symbol, "INDEX")
+
+# ============================================
+# DONE
+# ============================================
+print("\n🔥 ALL MONTHLY DATA READY (EQUITY + INDICES)")
+print("Saved in →", OUT_DIR)
