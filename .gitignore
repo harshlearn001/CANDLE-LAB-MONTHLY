@@ -1,0 +1,68 @@
+# =========================
+# PYTHON
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+
+# =========================
+# ENV / IDE
+# =========================
+.env
+.venv/
+venv/
+env/
+.idea/
+.vscode/
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# LARGE DATA (IMPORTANT)
+# =========================
+
+# Raw + processed data
+data/
+analysis/
+
+# Any CSV outputs
+*.csv
+
+# Excel outputs
+*.xlsx
+
+# Zipped files
+*.zip
+
+# =========================
+# OPTIONAL (KEEP STRUCTURE)
+# =========================
+
+# Keep empty folders
+!data/.gitkeep
+!analysis/.gitkeep
+
+# =========================
+# LOGS / OUTPUTS
+# =========================
+logs/
+*.out
+*.tmp
+
+# =========================
+# BACKUPS
+# =========================
+*.bak
+*.old
+
+# =========================
+# NOTE
+# =========================
+# If you want to track specific CSV, remove *.csv
