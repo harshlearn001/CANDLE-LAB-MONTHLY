@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 
-print("⚡ MONTHLY QUICK UPDATE (LAST MONTH ONLY)\n")
+print("⚡ MONTHLY QUICK UPDATE (HOLIDAY SMART)\n")
 
 # ============================================
 # PATHS
@@ -13,11 +13,30 @@ INDICES_DIR = Path(r"H:\MarketForge\data\master\Indices_master")
 
 OUT_DIR = Path(r"H:\CANDLE-LAB-MONTHLY\data\monthly")
 
+# 🔥 HOLIDAY FILE
+HOLIDAY_FILE = Path(r"H:\CANDLE-LAB-MONTHLY\config\nse_holidays_2026.csv")
+
+# ============================================
+# LOAD HOLIDAYS
+# ============================================
+holiday_df = pd.read_csv(HOLIDAY_FILE)
+holiday_df["DATE"] = pd.to_datetime(holiday_df["DATE"])
+HOLIDAYS = set(holiday_df["DATE"])
+
 # ============================================
 # LOAD F&O SYMBOLS
 # ============================================
 fno_df = pd.read_csv(FNO_FILE)
 FNO_SYMBOLS = set(fno_df["SYMBOL"].astype(str).str.upper().str.strip())
+
+# ============================================
+# FUNCTION: GET LAST TRADING DAY
+# ============================================
+def get_last_trading_day(group):
+    valid = group[~group.index.isin(HOLIDAYS)]
+    if valid.empty:
+        return None
+    return valid.iloc[-1]
 
 # ============================================
 # FUNCTION: UPDATE ONLY LAST MONTH
@@ -26,21 +45,18 @@ def update_last_month(file, symbol, tag):
     try:
         out_file = OUT_DIR / f"{symbol}.csv"
 
-        # Must exist (since history already built)
         if not out_file.exists():
             print(f"⚠ Skipped {symbol} (no historical file)")
             return
 
-        # Load existing monthly
         old = pd.read_csv(out_file)
         old["DATE"] = pd.to_datetime(old["DATE"])
 
         last_month = old["DATE"].max()
 
-        # Load daily data
+        # LOAD DAILY
         df = pd.read_csv(file)
 
-        # Detect date column
         if "DATE" in df.columns:
             date_col = "DATE"
         elif "TRADE_DATE" in df.columns:
@@ -56,29 +72,46 @@ def update_last_month(file, symbol, tag):
         df.set_index(date_col, inplace=True)
 
         # ============================================
-        # ONLY LAST 2 MONTHS DATA
+        # LAST ~2 MONTHS DATA
         # ============================================
-        df = df[df.index >= last_month - pd.DateOffset(days=35)]
+        df = df[df.index >= last_month - pd.DateOffset(days=40)]
+
+        if df.empty:
+            print(f"⚠ No data → {symbol}")
+            return
 
         # ============================================
-        # BUILD MONTHLY
+        # GROUP BY MONTH (SMART)
         # ============================================
-        monthly = pd.DataFrame()
-        monthly["OPEN"] = df["OPEN"].resample("ME").first()
-        monthly["HIGH"] = df["HIGH"].resample("ME").max()
-        monthly["LOW"] = df["LOW"].resample("ME").min()
-        monthly["CLOSE"] = df["CLOSE"].resample("ME").last()
+        df["MONTH"] = df.index.to_period("M")
 
-        if "VOLUME" in df.columns:
-            monthly["VOLUME"] = df["VOLUME"].resample("ME").sum()
-        else:
-            monthly["VOLUME"] = 0
+        monthly_rows = []
 
-        monthly.dropna(inplace=True)
-        monthly.reset_index(inplace=True)
+        for _, g in df.groupby("MONTH"):
+            g = g.sort_index()
 
-        monthly.rename(columns={date_col: "DATE"}, inplace=True)
+            last_row = get_last_trading_day(g)
+            if last_row is None:
+                continue
 
+            monthly_rows.append({
+                "DATE": last_row.name,               # 🔥 correct trading date
+                "OPEN": g["OPEN"].iloc[0],
+                "HIGH": g["HIGH"].max(),
+                "LOW": g["LOW"].min(),
+                "CLOSE": last_row["CLOSE"],
+                "VOLUME": g["VOLUME"].sum() if "VOLUME" in g.columns else 0
+            })
+
+        monthly = pd.DataFrame(monthly_rows)
+
+        if monthly.empty:
+            print(f"⚠ Empty monthly → {symbol}")
+            return
+
+        # ============================================
+        # FORMAT
+        # ============================================
         monthly["SYMBOL"] = symbol
         monthly["TYPE"] = tag
 
@@ -105,7 +138,7 @@ def update_last_month(file, symbol, tag):
         print(f"❌ ERROR: {file} | {e}")
 
 # ============================================
-# PROCESS EQUITY (F&O ONLY)
+# PROCESS EQUITY
 # ============================================
 print("🔹 EQUITY UPDATE\n")
 
@@ -130,4 +163,4 @@ for file in INDICES_DIR.glob("*.csv"):
 # ============================================
 # DONE
 # ============================================
-print("\n🔥 LAST MONTH UPDATE COMPLETE")
+print("\n🔥 LAST MONTH UPDATE COMPLETE (HOLIDAY SMART)")
