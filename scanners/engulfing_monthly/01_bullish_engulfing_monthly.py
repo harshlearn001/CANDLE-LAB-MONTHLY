@@ -1,13 +1,25 @@
-import pandas as pd
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+CANDLE-LAB | MONTHLY BULLISH ENGULFING (EXACT TEXTBOOK)
+
+✔ Previous candle RED (not doji)
+✔ Current candle GREEN (not doji)
+✔ Current BODY fully engulfs previous BODY
+✔ NO trend, NO volume, NO smart logic
+✔ Works on MONTHLY data
+"""
+
 from pathlib import Path
+import pandas as pd
 from datetime import datetime
 
-print("MONTHLY BULLISH ENGULFING\n")
-
-# ==============================
-# PATHS (UPDATED)
-# ==============================
+# =================================================
+# PATHS (UPDATED FOR MONTHLY)
+# =================================================
 DATA_DIR = Path(r"H:\CANDLE-LAB-MONTHLY\data\monthly")
+FNO_FILE = Path(r"H:\CANDLE-LAB\config\fno_symbols.csv")
 
 OUT_DIR = Path(r"H:\CANDLE-LAB-MONTHLY\analysis\equity\signals\engulfing_monthly")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -15,52 +27,223 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 today = datetime.now().strftime("%Y-%m-%d")
 OUT_FILE = OUT_DIR / f"monthly_bullish_engulfing_{today}.csv"
 
+# =================================================
+# PARAMETERS
+# =================================================
+MIN_BODY_RATIO = 0.40   # 40% of range = not doji
+
+# =================================================
+# LOAD SYMBOLS
+# =================================================
+symbols = set(
+    pd.read_csv(FNO_FILE)["SYMBOL"]
+    .astype(str).str.strip().str.upper()
+)
+
 results = []
 
-# ==============================
-# SCAN
-# ==============================
-files = list(DATA_DIR.glob("*.csv"))
+print(f"F&O symbols loaded: {len(symbols)}")
 
-for file in files:
+# =================================================
+# PROCESS
+# =================================================
+for symbol in sorted(symbols):
+
+    file = DATA_DIR / f"{symbol}.csv"
+
+    if not file.exists():
+        continue
+
     try:
         df = pd.read_csv(file)
 
         if len(df) < 2:
             continue
 
-        # 🔥 standardize columns
-        df.columns = [c.lower() for c in df.columns]
+        df.columns = df.columns.str.strip()
 
-        df = df.tail(2)
+        req = {"DATE", "OPEN", "HIGH", "LOW", "CLOSE"}
+        if not req.issubset(df.columns):
+            continue
 
-        prev = df.iloc[0]
-        curr = df.iloc[1]
+        # ---------------------------------------------
+        # DATE PARSE (Flexible)
+        # ---------------------------------------------
+        df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+        df = df.dropna(subset=["DATE"]).sort_values("DATE")
 
-        # ==========================
-        # BULLISH ENGULFING LOGIC
-        # ==========================
+        if len(df) < 2:
+            continue
+
+        prev = df.iloc[-2]
+        curr = df.iloc[-1]
+
+        # ---------------------------------------------
+        # BODY RATIO (DOJI FILTER)
+        # ---------------------------------------------
+        def body_ratio(c):
+            rng = c["HIGH"] - c["LOW"]
+            if rng <= 0:
+                return 0
+            return abs(c["CLOSE"] - c["OPEN"]) / rng
+
+        if body_ratio(prev) < MIN_BODY_RATIO:
+            continue
+
+        if body_ratio(curr) < MIN_BODY_RATIO:
+            continue
+
+        # ---------------------------------------------
+        # EXACT BULLISH ENGULFING
+        # ---------------------------------------------
         if (
-            prev["close"] < prev["open"] and   # previous bearish
-            curr["close"] > curr["open"] and   # current bullish
-            curr["open"] < prev["close"] and
-            curr["close"] > prev["open"]
+            prev["CLOSE"] < prev["OPEN"] and
+            curr["CLOSE"] > curr["OPEN"] and
+            curr["OPEN"]  < prev["CLOSE"] and
+            curr["CLOSE"] > prev["OPEN"]
         ):
-            print(f"{file.stem}")
 
             results.append({
-                "SYMBOL": file.stem,
-                "Pattern": "Bullish Engulfing"
+                "SYMBOL": symbol,
+                "DATE": curr["DATE"].date(),
+                "PATTERN": "BULLISH_ENGULFING_MONTHLY"
             })
 
+            print(f"EXACT MONTHLY BULLISH ENGULFING → {symbol}")
+
     except Exception as e:
-        print(f"ERROR {file.stem}: {e}")
+        print(f"ERROR {symbol} | {e}")
 
-# ==============================
+# =================================================
 # SAVE
-# ==============================
-df_out = pd.DataFrame(results)
-df_out.to_csv(OUT_FILE, index=False)
+# =================================================
+if results:
+    pd.DataFrame(results).to_csv(OUT_FILE, index=False)
 
-print(f"\nTotal: {len(results)}")
+print("\nMONTHLY BULLISH ENGULFING SCAN COMPLETED")
+print(f"Stocks found: {len(results)}")
+print(f"Saved → {OUT_FILE}")#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+CANDLE-LAB | MONTHLY BULLISH ENGULFING (EXACT TEXTBOOK)
+
+✔ Previous candle RED (not doji)
+✔ Current candle GREEN (not doji)
+✔ Current BODY fully engulfs previous BODY
+✔ NO trend, NO volume, NO smart logic
+✔ Works on MONTHLY data
+"""
+
+from pathlib import Path
+import pandas as pd
+from datetime import datetime
+
+# =================================================
+# PATHS (UPDATED FOR MONTHLY)
+# =================================================
+DATA_DIR = Path(r"H:\CANDLE-LAB-MONTHLY\data\monthly")
+FNO_FILE = Path(r"H:\CANDLE-LAB\config\fno_symbols.csv")
+
+OUT_DIR = Path(r"H:\CANDLE-LAB-MONTHLY\analysis\equity\signals\engulfing_monthly")
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+today = datetime.now().strftime("%Y-%m-%d")
+OUT_FILE = OUT_DIR / f"monthly_bullish_engulfing_{today}.csv"
+
+# =================================================
+# PARAMETERS
+# =================================================
+MIN_BODY_RATIO = 0.40   # 40% of range = not doji
+
+# =================================================
+# LOAD SYMBOLS
+# =================================================
+symbols = set(
+    pd.read_csv(FNO_FILE)["SYMBOL"]
+    .astype(str).str.strip().str.upper()
+)
+
+results = []
+
+print(f"F&O symbols loaded: {len(symbols)}")
+
+# =================================================
+# PROCESS
+# =================================================
+for symbol in sorted(symbols):
+
+    file = DATA_DIR / f"{symbol}.csv"
+
+    if not file.exists():
+        continue
+
+    try:
+        df = pd.read_csv(file)
+
+        if len(df) < 2:
+            continue
+
+        df.columns = df.columns.str.strip()
+
+        req = {"DATE", "OPEN", "HIGH", "LOW", "CLOSE"}
+        if not req.issubset(df.columns):
+            continue
+
+        # ---------------------------------------------
+        # DATE PARSE (Flexible)
+        # ---------------------------------------------
+        df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+        df = df.dropna(subset=["DATE"]).sort_values("DATE")
+
+        if len(df) < 2:
+            continue
+
+        prev = df.iloc[-2]
+        curr = df.iloc[-1]
+
+        # ---------------------------------------------
+        # BODY RATIO (DOJI FILTER)
+        # ---------------------------------------------
+        def body_ratio(c):
+            rng = c["HIGH"] - c["LOW"]
+            if rng <= 0:
+                return 0
+            return abs(c["CLOSE"] - c["OPEN"]) / rng
+
+        if body_ratio(prev) < MIN_BODY_RATIO:
+            continue
+
+        if body_ratio(curr) < MIN_BODY_RATIO:
+            continue
+
+        # ---------------------------------------------
+        # EXACT BULLISH ENGULFING
+        # ---------------------------------------------
+        if (
+            prev["CLOSE"] < prev["OPEN"] and
+            curr["CLOSE"] > curr["OPEN"] and
+            curr["OPEN"]  < prev["CLOSE"] and
+            curr["CLOSE"] > prev["OPEN"]
+        ):
+
+            results.append({
+                "SYMBOL": symbol,
+                "DATE": curr["DATE"].date(),
+                "PATTERN": "BULLISH_ENGULFING_MONTHLY"
+            })
+
+            print(f"EXACT MONTHLY BULLISH ENGULFING → {symbol}")
+
+    except Exception as e:
+        print(f"ERROR {symbol} | {e}")
+
+# =================================================
+# SAVE
+# =================================================
+if results:
+    pd.DataFrame(results).to_csv(OUT_FILE, index=False)
+
+print("\nMONTHLY BULLISH ENGULFING SCAN COMPLETED")
+print(f"Stocks found: {len(results)}")
 print(f"Saved → {OUT_FILE}")

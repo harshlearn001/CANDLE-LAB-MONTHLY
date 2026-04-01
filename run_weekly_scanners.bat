@@ -1,119 +1,67 @@
 @echo off
 
 echo ======================================
-echo   CANDLE-LAB MONTHLY PIPELINE
+echo 🚀 RUNNING MONTHLY SCANNERS
 echo ======================================
 
-call conda activate TradeSense
-
 REM ======================================
-REM BUILD MONTHLY DATA
+REM STEP 1: BUILD / UPDATE DATA
 REM ======================================
 echo.
-echo [BUILD MONTHLY DATA]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\setup
-#python built_monthly_historical_data.py
-python update_only_monthly_builder.py
+echo 📦 Building Monthly Data...
+python scanners/setup/02_update_monthly_auto.py
 
 REM ======================================
-REM TREND + MOMENTUM
+REM STEP 2: CORE SIGNALS
 REM ======================================
 echo.
-echo [MONTHLY ADX]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\adx_monthly
-python 01_adx_monthly.py
+echo 📊 Running ADX...
+python scanners/adx_monthly/01_adx_monthly.py
 
 echo.
-echo [MONTHLY RSI]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\rsi_monthly
-python 01_rsi_monthly.py
+echo 📊 Running RSI...
+python scanners/rsi_monthly/01_rsi_monthly.py
 
 echo.
-echo [MONTHLY RSI DIVERGENCE]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\rsi_divergence_monthly
-python 01_rsi_divergence_monthly.py
+echo 📊 Running RSI Divergence...
+python scanners/rsi_divergence_monthly/01_rsi_divergence_monthly.py
 
 REM ======================================
-REM REVERSAL PATTERNS
+REM STEP 3: PRICE ACTION PATTERNS
 REM ======================================
 echo.
-echo [MONTHLY ENGULFING]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\engulfing_monthly
-python 01_bullish_engulfing_monthly.py
-python 02_bearish_engulfing_monthly.py
+echo 📈 Running Bullish Engulfing...
+python scanners/engulfing_monthly/01_bullish_engulfing_monthly.py
 
 echo.
-echo [MONTHLY HAMMER]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\hammer_monthly
-python 01_hammer_confirmed_monthly.py
+echo 📉 Running Bearish Engulfing...
+python scanners/engulfing_monthly/01_bearish_engulfing_monthly.py
 
 echo.
-echo [MONTHLY HANGING MAN]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\hangingman_monthly
-python 01_hangingman_confirmed_monthly.py
+echo 📈 Running Piercing Pattern...
+python scanners/piercing_pattern_monthly/01_piercing_pattern_monthly.py
 
 echo.
-echo [MONTHLY SHOOTING STAR]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\shooting_star_monthly
-python 01_shooting_star_monthly.py
+echo 📊 Running NR7...
+python scanners/nr7_monthly/01_nr7_monthly.py
 
 echo.
-echo [MONTHLY GRAVESTONE]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\gravestone_monthly
-python 01_gravestone_monthly.py
-
-echo.
-echo [MONTHLY MORNING STAR]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\morning_star_monthly
-python 01_morning_star_monthly.py
-
-echo.
-echo [MONTHLY PIERCING PATTERN]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\piercing_pattern_monthly
-python 01_piercing_pattern_monthly.py
-
-echo.
-echo [MONTHLY HARAMI]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\harami_monthly
-python 01_harami_monthly.py
+echo 📊 Running Inside Bar...
+python scanners/insidebar_monthly/01_insidebar_monthly.py
 
 REM ======================================
-REM BREAKOUT / VOLATILITY
+REM STEP 4: MASTER ENGINE
 REM ======================================
 echo.
-echo [MONTHLY INSIDE BAR]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\insidebar_monthly
-python 01_insidebar_monthly.py
-
-echo.
-echo [MONTHLY LONG LEGGED DOJI]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\longleg_doji_monthly
-python 01_longleg_doji_monthly.py
-
-echo.
-echo [MONTHLY SMALL DOJI]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\doji_monthly
-python 01_small_doji_monthly.py
-
-echo.
-echo [MONTHLY NR7]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\nr7_monthly
-python 01_nr7_monthly.py
-
-REM ======================================
-REM MASTER ENGINE
-REM ======================================
-echo.
-echo [MASTER ENGINE]
-cd /d H:\CANDLE-LAB-MONTHLY\scanners\master
-python 01_master_signal_engine_monthly.py
+echo 🧠 Running Master Signal Engine...
+python scanners/master/01_master_signal_engine_monthly.py
 
 REM ======================================
 REM DONE
 REM ======================================
 echo.
 echo ======================================
-echo   MONTHLY PIPELINE COMPLETED
+echo ✅ ALL SCANNERS COMPLETED SUCCESSFULLY
 echo ======================================
 
 pause

@@ -1,150 +1,132 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+CANDLE-LAB | MONTHLY CANDLES (F&O ONLY)
+
+✔ Uses FNO symbols list
+✔ Builds calendar monthly candles (NOT expiry-based)
+✔ Clean OHLC aggregation
+✔ Production ready
+"""
+
 import pandas as pd
 from pathlib import Path
 
-print("📊 BUILDING MONTHLY CANDLES (HOLIDAY SMART)\n")
+print("📊 BUILDING MONTHLY CANDLES (F&O ONLY)\n")
 
 # ============================================
 # PATHS
 # ============================================
 FNO_FILE = Path(r"H:\CANDLE-LAB-MONTHLY\config\fno_symbols.csv")
 
-EQUITY_DIR = Path(r"H:\MarketForge\data\master\Equity_stock_master")
-INDICES_DIR = Path(r"H:\MarketForge\data\master\Indices_master")
+DATA_DIR = Path(r"H:\MarketForge\data\master\Equity_stock_master")
 
 OUT_DIR = Path(r"H:\CANDLE-LAB-MONTHLY\data\monthly")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-# 🔥 HOLIDAY FILE
-HOLIDAY_FILE = Path(r"H:\CANDLE-LAB-MONTHLY\config\nse_holidays_2026.csv")
-
-# ============================================
-# LOAD HOLIDAYS
-# ============================================
-holiday_df = pd.read_csv(HOLIDAY_FILE)
-holiday_df["DATE"] = pd.to_datetime(holiday_df["DATE"])
-HOLIDAYS = set(holiday_df["DATE"])
 
 # ============================================
 # LOAD F&O SYMBOLS
 # ============================================
 fno_df = pd.read_csv(FNO_FILE)
-FNO_SYMBOLS = set(fno_df["SYMBOL"].astype(str).str.upper().str.strip())
 
-print(f"Loaded F&O symbols: {len(FNO_SYMBOLS)}\n")
+FNO_SYMBOLS = set(
+    fno_df["SYMBOL"]
+    .astype(str)
+    .str.strip()
+    .str.upper()
+)
 
-# ============================================
-# FUNCTION: GET LAST TRADING DAY OF MONTH
-# ============================================
-def get_last_trading_day(group):
-    valid = group[~group.index.isin(HOLIDAYS)]
-    if valid.empty:
-        return None
-    return valid.iloc[-1]
+print(f"✔ Loaded F&O symbols: {len(FNO_SYMBOLS)}\n")
 
 # ============================================
-# FUNCTION: BUILD MONTHLY (SMART)
+# FUNCTION: BUILD MONTHLY
 # ============================================
-def build_monthly(file, symbol, tag):
+def build_monthly(file, symbol):
+
     try:
         df = pd.read_csv(file)
 
-        # DATE COLUMN DETECTION
+        df.columns = df.columns.str.strip().str.upper()
+
+        # Detect date column
         if "DATE" in df.columns:
             date_col = "DATE"
         elif "TRADE_DATE" in df.columns:
             date_col = "TRADE_DATE"
         else:
-            print(f"⚠ Skipped {symbol} (no DATE column)")
-            return
+            return None
 
-        # CHECK OHLC
-        required_cols = {"OPEN", "HIGH", "LOW", "CLOSE"}
-        if not required_cols.issubset(df.columns):
-            print(f"⚠ Skipped {symbol} (missing OHLC)")
-            return
-
-        # CLEAN
+        # Convert date
         df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-        df.dropna(subset=[date_col], inplace=True)
+        df = df.dropna(subset=[date_col])
 
-        df.sort_values(date_col, inplace=True)
+        df = df.sort_values(date_col)
         df.set_index(date_col, inplace=True)
+
+        # Ensure OHLC
+        required = {"OPEN", "HIGH", "LOW", "CLOSE"}
+        if not required.issubset(df.columns):
+            return None
 
         if "VOLUME" not in df.columns:
             df["VOLUME"] = 0
 
-        # ============================================
-        # GROUP BY MONTH (SMART)
-        # ============================================
+        # ====================================
+        # GROUP BY MONTH (CALENDAR)
+        # ====================================
         df["MONTH"] = df.index.to_period("M")
 
-        monthly_rows = []
+        monthly = []
 
         for _, g in df.groupby("MONTH"):
+
             g = g.sort_index()
 
-            last_row = get_last_trading_day(g)
-            if last_row is None:
-                continue
-
-            monthly_rows.append({
-                "DATE": last_row.name,                 # 🔥 correct trading day
+            monthly.append({
+                "DATE": g.index[-1],              # last trading day
+                "SYMBOL": symbol,
                 "OPEN": g["OPEN"].iloc[0],
                 "HIGH": g["HIGH"].max(),
                 "LOW": g["LOW"].min(),
-                "CLOSE": last_row["CLOSE"],            # 🔥 correct close
+                "CLOSE": g["CLOSE"].iloc[-1],
                 "VOLUME": g["VOLUME"].sum()
             })
 
-        monthly = pd.DataFrame(monthly_rows)
+        if not monthly:
+            return None
 
-        if monthly.empty:
-            print(f"⚠ Empty monthly → {symbol}")
-            return
-
-        # ADD SYMBOL + TYPE
-        monthly["SYMBOL"] = symbol
-        monthly["TYPE"] = tag
-
-        monthly = monthly[
-            ["DATE", "SYMBOL", "TYPE", "OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]
-        ]
-
-        # SAVE
-        out_file = OUT_DIR / f"{symbol}.csv"
-        monthly.sort_values("DATE", inplace=True)
-        monthly.to_csv(out_file, index=False)
-
-        print(f"✔ {symbol} ({tag}) done")
+        return pd.DataFrame(monthly)
 
     except Exception as e:
-        print(f"❌ ERROR: {file} | {e}")
+        print(f"❌ ERROR: {symbol} | {e}")
+        return None
 
 # ============================================
-# PROCESS EQUITY (F&O ONLY)
+# PROCESS F&O STOCKS
 # ============================================
-print("🔹 Processing EQUITY (F&O only)\n")
+print("🔹 Processing F&O stocks...\n")
 
-for file in EQUITY_DIR.glob("*.csv"):
-    symbol = file.stem.upper()
+for symbol in sorted(FNO_SYMBOLS):
 
-    if symbol not in FNO_SYMBOLS:
+    file = DATA_DIR / f"{symbol}.csv"
+
+    if not file.exists():
+        print(f"⚠ Missing: {symbol}")
         continue
 
-    build_monthly(file, symbol, "EQUITY")
+    result = build_monthly(file, symbol)
 
-# ============================================
-# PROCESS INDICES
-# ============================================
-print("\n🔹 Processing INDICES (ALL)\n")
+    if result is None:
+        continue
 
-for file in INDICES_DIR.glob("*.csv"):
-    symbol = file.stem.upper()
+    out_file = OUT_DIR / f"{symbol}.csv"
+    result.to_csv(out_file, index=False)
 
-    build_monthly(file, symbol, "INDEX")
+    print(f"✔ {symbol} done")
 
 # ============================================
 # DONE
 # ============================================
-print("\n🔥 ALL MONTHLY DATA READY (HOLIDAY SMART)")
+print("\n🔥 F&O MONTHLY CANDLES READY")
 print("Saved in →", OUT_DIR)
