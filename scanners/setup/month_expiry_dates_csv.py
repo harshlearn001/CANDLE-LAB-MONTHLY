@@ -2,19 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-CANDLE-LAB | FINAL EXPIRY (ADAPTIVE + FUTURE PROOF)
+CANDLE-LAB | NIFTY MONTHLY EXPIRY CSV
 
-✔ Uses futures data (MarketForge)
-✔ Automatically detects expiry weekday (Tue/Thu)
-✔ Handles NSE rule changes
-✔ No hardcoding
-✔ Institutional-grade accuracy
+Builds one monthly expiry date per month from NIFTY futures master data.
 """
 
 import pandas as pd
 from pathlib import Path
 
-print("📊 BUILDING FINAL ADAPTIVE EXPIRY SYSTEM\n")
+print("BUILDING NIFTY MONTHLY EXPIRY CSV\n")
 
 # ============================================
 # PATH
@@ -35,59 +31,35 @@ df["EXP_DATE"] = pd.to_datetime(df["EXP_DATE"], format="%Y%m%d", errors="coerce"
 df = df.dropna(subset=["EXP_DATE"])
 
 # ============================================
-# GROUP BY MONTH
+# KEEP ONLY VALID NIFTY FUTURES EXPIRIES
 # ============================================
 df["MONTH"] = df["EXP_DATE"].dt.to_period("M")
+if "SYMBOL" in df.columns:
+    df = df[df["SYMBOL"].astype(str).str.strip().str.upper() == "NIFTY"]
 
-monthly_expiry = []
-
-# ============================================
-# CORE LOGIC (ADAPTIVE)
-# ============================================
-for period, group in df.groupby("MONTH"):
-
-    dates = sorted(group["EXP_DATE"].unique())
-
-    if len(dates) == 0:
-        continue
-
-    # ----------------------------------------
-    # 🔥 STEP 1: Detect dominant weekday
-    # ----------------------------------------
-    weekday_series = pd.Series([d.weekday() for d in dates])
-    dominant_weekday = weekday_series.value_counts().idxmax()
-
-    # ----------------------------------------
-    # 🔥 STEP 2: Filter only dominant weekday
-    # ----------------------------------------
-    valid_dates = [d for d in dates if d.weekday() == dominant_weekday]
-
-    if not valid_dates:
-        continue
-
-    # ----------------------------------------
-    # 🔥 STEP 3: Take latest (true expiry)
-    # ----------------------------------------
-    expiry = max(valid_dates)
-
-    monthly_expiry.append(expiry)
+expiry_df = (
+    df.groupby("MONTH", as_index=False)["EXP_DATE"]
+    .max()
+    .rename(columns={"EXP_DATE": "EXPIRY_DATE"})
+    .sort_values("EXPIRY_DATE")
+)
 
 # ============================================
 # FINAL DATAFRAME
 # ============================================
-expiry_df = pd.DataFrame({
-    "EXPIRY_DATE": sorted(set(monthly_expiry))
-})
+expiry_df["EXPIRY_DATE"] = expiry_df["EXPIRY_DATE"].dt.strftime("%Y-%m-%d")
+expiry_df = expiry_df[["EXPIRY_DATE"]]
 
 # ============================================
 # SAVE
 # ============================================
+OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 expiry_df.to_csv(OUT_FILE, index=False)
 
-print("\n✅ FINAL ADAPTIVE EXPIRY READY →", OUT_FILE)
+print("\nNIFTY MONTHLY EXPIRY CSV READY ->", OUT_FILE)
 
-print("\n📌 SAMPLE:")
+print("\nSAMPLE:")
 print(expiry_df.head(10))
 
-print("\n📌 LAST:")
+print("\nLAST:")
 print(expiry_df.tail(10))

@@ -15,6 +15,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 today = datetime.now().strftime("%Y-%m-%d")
 OUT_FILE = OUT_DIR / f"monthly_rsi_{today}.csv"
 
+RESULT_COLUMNS = ["SYMBOL", "RSI", "Signal"]
 results = []
 
 # ==============================
@@ -45,7 +46,7 @@ for file in files:
         if len(df) < 30:
             continue
 
-        # 🔥 standardize columns
+        #  standardize columns
         df.columns = [c.lower() for c in df.columns]
 
         if "close" not in df.columns:
@@ -77,7 +78,7 @@ for file in files:
             "Signal": signal
         })
 
-        print(f"{file.stem} → {signal}")
+        print(f"{file.stem} -> {signal}")
 
     except Exception as e:
         print(f"ERROR {file.stem}: {e}")
@@ -85,8 +86,8 @@ for file in files:
 # ==============================
 # SAVE
 # ==============================
-df_out = pd.DataFrame(results)
+df_out = pd.DataFrame(results, columns=RESULT_COLUMNS)
 df_out.to_csv(OUT_FILE, index=False)
 
 print(f"\nTotal: {len(results)}")
-print(f"Saved → {OUT_FILE}")
+print(f"Saved -> {OUT_FILE}")

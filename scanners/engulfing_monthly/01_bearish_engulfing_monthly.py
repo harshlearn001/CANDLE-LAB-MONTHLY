@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
-print("🔥 MONTHLY BEARISH ENGULFING (UPGRADED)\n")
+print(" MONTHLY BEARISH ENGULFING (UPGRADED)\n")
 
 # ==============================
 # PATHS
@@ -15,6 +15,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 today = datetime.now().strftime("%Y-%m-%d")
 OUT_FILE = OUT_DIR / f"monthly_bearish_engulfing_{today}.csv"
 
+RESULT_COLUMNS = ["SYMBOL", "Pattern", "Prev_Close", "Curr_Close", "Body_Strength"]
 results = []
 
 # ==============================
@@ -65,18 +66,19 @@ for file in DATA_DIR.glob("*.csv"):
             })
 
     except Exception as e:
-        print(f"❌ ERROR {file.stem}: {e}")
+        print(f"ERROR ERROR {file.stem}: {e}")
 
 # ==============================
 # SAVE
 # ==============================
-df_out = pd.DataFrame(results)
+df_out = pd.DataFrame(results, columns=RESULT_COLUMNS)
+
+df_out.to_csv(OUT_FILE, index=False)
 
 if not df_out.empty:
-    df_out.to_csv(OUT_FILE, index=False)
-
-    print(f"\n🔥 TOTAL BEARISH ENGULFING: {len(results)}")
-    print(f"Saved → {OUT_FILE}")
+    print(f"\n TOTAL BEARISH ENGULFING: {len(results)}")
+    print(f"Saved -> {OUT_FILE}")
 
 else:
-    print("\n⚠ No bearish engulfing found")
+    print("\nWARN No bearish engulfing found")
+    print(f"Saved -> {OUT_FILE}")

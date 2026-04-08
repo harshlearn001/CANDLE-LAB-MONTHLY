@@ -27,6 +27,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 today_str = datetime.now().strftime("%Y-%m-%d")
 OUT_FILE = OUT_DIR / f"monthly_nr7_{today_str}.csv"
 
+RESULT_COLUMNS = ["Symbol", "Close", "Range", "MA20", "Direction"]
 results = []
 
 # =====================================================
@@ -89,7 +90,7 @@ for file in files:
             elif trend_down:
                 direction = "BREAKOUT_DOWN"
 
-            print(f"NR7 → {file.stem} ({direction})")
+            print(f"NR7 -> {file.stem} ({direction})")
 
             results.append({
                 "Symbol": file.stem,
@@ -100,20 +101,23 @@ for file in files:
             })
 
     except Exception as e:
-        print(f"ERROR → {file.stem} | {e}")
+        print(f"ERROR -> {file.stem} | {e}")
 
 # =====================================================
 # SAVE OUTPUT
 # =====================================================
-out = pd.DataFrame(results)
+out = pd.DataFrame(results, columns=RESULT_COLUMNS)
 
 if not out.empty:
     out = out.sort_values("Range")  # tightest first
-    out.to_csv(OUT_FILE, index=False)
 
+out.to_csv(OUT_FILE, index=False)
+
+if not out.empty:
     print("\nMONTHLY NR7 SCAN COMPLETED")
     print("Stocks found:", len(out))
-    print("Saved →", OUT_FILE)
+    print("Saved ->", OUT_FILE)
 
 else:
     print("\nNo NR7 signals found")
+    print("Saved ->", OUT_FILE)

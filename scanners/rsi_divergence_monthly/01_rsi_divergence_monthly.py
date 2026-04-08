@@ -17,6 +17,8 @@ today = datetime.now().strftime("%Y-%m-%d")
 OUT_BULL = OUT_DIR / f"monthly_bullish_divergence_{today}.csv"
 OUT_BEAR = OUT_DIR / f"monthly_bearish_divergence_{today}.csv"
 
+BULL_COLUMNS = ["SYMBOL", "Type"]
+BEAR_COLUMNS = ["SYMBOL", "Type"]
 bull_results = []
 bear_results = []
 
@@ -48,7 +50,7 @@ for file in files:
         if len(df) < 40:
             continue
 
-        # 🔥 standardize columns
+        #  standardize columns
         df.columns = [c.lower() for c in df.columns]
 
         if not {"high", "low", "close"}.issubset(df.columns):
@@ -87,7 +89,7 @@ for file in files:
             price_low2 < price_low1 and
             rsi_low2 > rsi_low1
         ):
-            print(f"Bullish → {file.stem}")
+            print(f"Bullish -> {file.stem}")
 
             bull_results.append({
                 "SYMBOL": file.stem,
@@ -101,7 +103,7 @@ for file in files:
             price_high2 > price_high1 and
             rsi_high2 < rsi_high1
         ):
-            print(f"Bearish → {file.stem}")
+            print(f"Bearish -> {file.stem}")
 
             bear_results.append({
                 "SYMBOL": file.stem,
@@ -114,8 +116,8 @@ for file in files:
 # ==============================
 # SAVE
 # ==============================
-pd.DataFrame(bull_results).to_csv(OUT_BULL, index=False)
-pd.DataFrame(bear_results).to_csv(OUT_BEAR, index=False)
+pd.DataFrame(bull_results, columns=BULL_COLUMNS).to_csv(OUT_BULL, index=False)
+pd.DataFrame(bear_results, columns=BEAR_COLUMNS).to_csv(OUT_BEAR, index=False)
 
 print("\nSCAN COMPLETE")
 print(f"Bullish: {len(bull_results)}")

@@ -15,6 +15,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 today = datetime.now().strftime("%Y-%m-%d")
 OUT_FILE = OUT_DIR / f"monthly_hangingman_confirmed_{today}.csv"
 
+RESULT_COLUMNS = ["SYMBOL", "Pattern"]
 results = []
 
 # ==============================
@@ -29,7 +30,7 @@ for file in files:
         if len(df) < 4:
             continue
 
-        # 🔥 standardize columns
+        #  standardize columns
         df.columns = [c.lower() for c in df.columns]
 
         # Context + pattern + confirmation
@@ -82,8 +83,8 @@ for file in files:
 # ==============================
 # SAVE
 # ==============================
-df_out = pd.DataFrame(results)
+df_out = pd.DataFrame(results, columns=RESULT_COLUMNS)
 df_out.to_csv(OUT_FILE, index=False)
 
 print(f"\nTotal: {len(results)}")
-print(f"Saved → {OUT_FILE}")
+print(f"Saved -> {OUT_FILE}")

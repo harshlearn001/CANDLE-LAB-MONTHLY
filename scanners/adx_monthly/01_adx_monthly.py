@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 import numpy as np
 
-print("🔥 MONTHLY ADX SCANNER (FIXED)\n")
+print(" MONTHLY ADX SCANNER (FIXED)\n")
 
 # ==============================
 # PATHS
@@ -16,6 +16,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 today = datetime.now().strftime("%Y-%m-%d")
 OUT_FILE = OUT_DIR / f"monthly_adx_{today}.csv"
 
+RESULT_COLUMNS = ["SYMBOL", "ADX", "+DI", "-DI", "Signal"]
 results = []
 
 # ==============================
@@ -74,7 +75,7 @@ for file in files:
         # Ensure required columns exist
         required_cols = {"open", "high", "low", "close"}
         if not required_cols.issubset(df.columns):
-            print(f"⚠ Skipped {file.stem} (missing OHLC)")
+            print(f"WARN Skipped {file.stem} (missing OHLC)")
             continue
 
         # Calculate ADX
@@ -82,7 +83,7 @@ for file in files:
 
         # Safety check
         if "adx" not in df.columns:
-            print(f"⚠ ADX missing for {file.stem}")
+            print(f"WARN ADX missing for {file.stem}")
             continue
 
         last = df.iloc[-1]
@@ -113,22 +114,25 @@ for file in files:
                 "Signal": signal
             })
 
-            print(f"{file.stem} → {signal} (ADX={round(adx,2)})")
+            print(f"{file.stem} -> {signal} (ADX={round(adx,2)})")
 
     except Exception as e:
-        print(f"❌ ERROR {file.stem}: {e}")
+        print(f"ERROR ERROR {file.stem}: {e}")
 
 # ==============================
 # SAVE OUTPUT
 # ==============================
-df_out = pd.DataFrame(results)
+df_out = pd.DataFrame(results, columns=RESULT_COLUMNS)
 
 if not df_out.empty:
     df_out = df_out.sort_values("ADX", ascending=False)
-    df_out.to_csv(OUT_FILE, index=False)
 
-    print(f"\n🔥 TOTAL STRONG TREND STOCKS: {len(results)}")
-    print(f"Saved → {OUT_FILE}")
+df_out.to_csv(OUT_FILE, index=False)
+
+if not df_out.empty:
+    print(f"\n TOTAL STRONG TREND STOCKS: {len(results)}")
+    print(f"Saved -> {OUT_FILE}")
 
 else:
-    print("\n⚠ No strong ADX trends found")
+    print("\nWARN No strong ADX trends found")
+    print(f"Saved -> {OUT_FILE}")
