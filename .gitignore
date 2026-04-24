@@ -5,8 +5,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.log
-*.sqlite3
 
 # =========================
 # ENV / IDE
@@ -25,34 +23,29 @@ env/
 Thumbs.db
 
 # =========================
-# LARGE DATA (IMPORTANT)
+# DATA (IGNORE HEAVY FILES ONLY)
 # =========================
-
-# Raw + processed data
 data/
 analysis/
 
-# Any CSV outputs
-*.csv
+# Ignore CSV only inside data folders
+data/**/*.csv
+analysis/**/*.csv
 
-# Excel outputs
-*.xlsx
-
-# Zipped files
-*.zip
+# Ignore Excel inside data folders
+data/**/*.xlsx
+analysis/**/*.xlsx
 
 # =========================
-# OPTIONAL (KEEP STRUCTURE)
+# KEEP IMPORTANT CONFIG
 # =========================
-
-# Keep empty folders
-!data/.gitkeep
-!analysis/.gitkeep
+!config/*.csv
 
 # =========================
 # LOGS / OUTPUTS
 # =========================
 logs/
+*.log
 *.out
 *.tmp
 
@@ -61,8 +54,9 @@ logs/
 # =========================
 *.bak
 *.old
-
-# =========================
-# NOTE
-# =========================
-# If you want to track specific CSV, remove *.csv
+# =====================
+# IGNORE LOCAL CONFIG FILES
+# =====================
+config/fno_symbols.csv
+config/nse_expiries_final.csv
+config/nse_holidays_2026.csv
